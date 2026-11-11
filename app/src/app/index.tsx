@@ -1,18 +1,18 @@
 import { Link } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-type Entry = { href: '/negative-space' | '/wrong-way-up' | null; kind: string; title: string; icon: string; blurb: string };
+type Entry = { href: '/negative-space' | '/wrong-way-up' | '/ceiling-stack' | '/upside-type' | '/mirror-trace' | null; kind: string; title: string; icon: string; blurb: string };
 
 const GAMES: Entry[] = [
   { href: '/negative-space', kind: 'Tilt puzzle', title: 'Negative Space', icon: '◐',
     blurb: 'Roll a ball by tilting, the wrong way. Flip the phone and black and white swap, so walls become floor.' },
   { href: '/wrong-way-up', kind: 'Reflex', title: 'Wrong Way Up', icon: '↯',
     blurb: 'Swipe the way the word says. Red words mean the opposite, the arrow lies, and "up" is upside down.' },
-  { href: null, kind: 'Arcade · coming next', title: 'Ceiling Stack', icon: '▤',
-    blurb: 'Drop sliding blocks to build a tower that hangs from the sky.' },
-  { href: null, kind: 'Typing test · coming next', title: 'Upside Type', icon: '⌨',
+  { href: '/ceiling-stack', kind: 'Arcade', title: 'Ceiling Stack', icon: '▤',
+    blurb: 'Tap to drop sliding blocks and build a tower that hangs from the sky. Tilting blows the block like wind.' },
+  { href: '/upside-type', kind: 'Typing test', title: 'Upside Type', icon: '⌨',
     blurb: 'A 60 second typing test on a keyboard that keeps getting worse.' },
-  { href: null, kind: 'Brain trainer · coming next', title: 'Mirror Trace', icon: '✎',
+  { href: '/mirror-trace', kind: 'Brain trainer', title: 'Mirror Trace', icon: '✎',
     blurb: 'Trace a shape while your line is reflected away from your finger.' },
 ];
 

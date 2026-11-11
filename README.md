@@ -36,4 +36,8 @@ On a laptop, keys 1-6 fake the phone's pose (1 upright, 2 upside down, 3/4 sidew
 |---|---|
 | Negative Space (tilt puzzle, flip to swap solid colours) | Ported |
 | Wrong Way Up (reflex swipes where every direction lies) | Ported |
-| Ceiling Stack, Upside Type, Mirror Trace | In `web/`, next to port |
+| Ceiling Stack (stacker hanging from the ceiling, tilt = wind) | Ported |
+| Upside Type (60s typing test, keyboard gets worse each phrase) | Ported |
+| Mirror Trace (trace shapes while your line is reflected) | Ported |
+
+Taps use the responder system (`onStartShouldSetResponder` / `onResponderGrant`) rather than `Pressable.onPressIn`, which didn't fire inside the transformed board on react-native-web.
