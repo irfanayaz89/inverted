@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Wrong Way Up</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #game { background: #101018; }
+  #bar { position: absolute; left: 20px; right: 20px; top: 70px; height: 10px; border-radius: 6px; background: #2a2838; overflow: hidden; }
+  #fill { height: 100%; width: 100%; background: #ffc23d; }
+  #cmd { position: absolute; left: 0; right: 0; top: 210px; text-align: center; font-size: 86px; font-weight: 900; letter-spacing: 2px; }
+  #rule { position: absolute; left: 0; right: 0; top: 160px; text-align: center; font-size: 18px; color: #aaa; }
+  #arrow { position: absolute; left: 50%; top: 400px; width: 150px; height: 150px; margin-left: -75px; font-size: 140px; line-height: 150px; text-align: center; color: #ffffff33; transition: transform .1s; }
+  #lives { letter-spacing: 4px; }
+  #flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s; }
+  .green { color: #29d17d; } .red { color: #ff3355; }
+</style>
+</head><body>
+<div id="game">
+  <div class="hud"><span id="score">0</span><span id="lives">♥♥♥</span></div>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="rule"></div>
+  <div id="cmd"></div>
+  <div id="arrow">↑</div>
+  <div id="flash"></div>
+  <div id="over" class="panel hidden">
+    <h2>Wrong way.</h2>
+    <p id="final"></p>
+    <button class="btn" id="again">Again</button>
+    <a class="inv-back" href="index.html">all prototypes</a>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const root = $('game');
+const inv = Inverted.create({
+  root, width: 400, height: 700,
+  title: 'Wrong Way Up',
+  subtitle: 'A reflex game where every direction lies.',
+  howTo: [
+    '<b class="green">GREEN</b> word: do exactly what it says.',
+    '<b class="red">RED</b> word: do the opposite. Red TAP means hands off, red WAIT means tap.',
+    'UP means the game\'s up. The game is upside down. Good luck.',
+    'The big arrow is a liar. Ignore it.',
+    'Turn sideways and everything mirrors, so LEFT and RIGHT swap too.',
+  ],
+});
+
+const DIRS = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+const OPP = { UP: 'DOWN', DOWN: 'UP', LEFT: 'RIGHT', RIGHT: 'LEFT', TAP: 'WAIT', WAIT: 'TAP' };
+const ARROWS = { UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' };
+let score = 0, lives = 3, limit = 2200, cur = null, t0 = 0, playing = false, down = null;
+
+function next() {
+  const pool = score < 4 ? DIRS : DIRS.concat(['TAP', 'WAIT']);
+  const word = pool[Math.floor(Math.random() * pool.length)];
+  const red = score >= 2 && Math.random() < Math.min(0.55, 0.2 + score * 0.03);
+  cur = { word, red, want: red ? OPP[word] : word };
+  $('cmd').textContent = word;
+  $('cmd').className = red ? 'red' : 'green';
+  $('rule').textContent = red ? 'do the opposite' : 'do it';
+  // decoy arrow: usually disagrees with the right answer
+  const decoy = DIRS[Math.floor(Math.random() * 4)];
+  $('arrow').textContent = ARROWS[decoy];
+  t0 = performance.now();
+}
+function flash(color) {
+  $('flash').style.background = color; $('flash').style.opacity = 0.45;
+  setTimeout(() => $('flash').style.opacity = 0, 120);
+}
+function answer(got) {
+  if (!playing || !cur) return;
+  if (got === cur.want) {
+    score++; limit = Math.max(650, limit * 0.95);
+    Inverted.beep(500 + score * 15, 60); flash('#29d17d');
+  } else {
+    lives--; Inverted.buzz(120); Inverted.beep(120, 200, 'sawtooth'); flash('#ff3355');
+    $('lives').textContent = '♥'.repeat(lives) + '♡'.repeat(3 - lives);
+    if (lives <= 0) return end();
+  }
+  $('score').textContent = score;
+  cur = null; setTimeout(next, 220);
+}
+function end() {
+  playing = false; cur = null;
+  const b = Inverted.best('wwu', score);
+  $('final').innerHTML = `Score <b>${score}</b><br>${b.isNew ? 'New best!' : 'Best ' + b.best}`;
+  $('over').classList.remove('hidden');
+}
+function start() {
+  score = 0; lives = 3; limit = 2200; playing = true;
+  $('score').textContent = 0; $('lives').textContent = '♥♥♥';
+  $('over').classList.add('hidden'); next();
+}
+function tick() {
+  if (playing && cur) {
+    const left = 1 - (performance.now() - t0) / limit;
+    $('fill').style.width = Math.max(0, left * 100) + '%';
+    if (left <= 0) answer('WAIT');
+  }
+  requestAnimationFrame(tick);
+}
+root.addEventListener('pointerdown', e => {
+  if (e.target.closest('button,a')) return;
+  down = inv.toLocal(e.clientX, e.clientY);
+});
+root.addEventListener('pointerup', e => {
+  if (!down) return;
+  const up = inv.toLocal(e.clientX, e.clientY);
+  const dx = up.x - down.x, dy = up.y - down.y; down = null;
+  if (Math.hypot(dx, dy) < 30) return answer('TAP');
+  if (Math.abs(dx) > Math.abs(dy)) answer(dx > 0 ? 'RIGHT' : 'LEFT');
+  else answer(dy > 0 ? 'DOWN' : 'UP');
+});
+$('again').addEventListener('click', start);
+inv.onStart(start);
+requestAnimationFrame(tick);
+</script>
+</body></html>

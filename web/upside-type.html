@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Upside Type</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #game { background: #12121a; }
+  #layout { position: absolute; top: 48px; left: 0; right: 0; text-align: center; color: #ffc23d; font-weight: 700; font-size: 15px; }
+  #target { position: absolute; top: 90px; left: 20px; right: 20px; font: 600 26px/1.35 ui-monospace, Menlo, monospace; min-height: 110px; }
+  #target .ok { color: #29d17d; } #target .bad { color: #fff; background: #ff3355; border-radius: 3px; }
+  #target .todo { color: #77748a; } #target .cur { color: #fff; border-bottom: 3px solid #ffc23d; }
+  #timer { position: absolute; top: 250px; left: 0; right: 0; text-align: center; font-size: 64px; font-weight: 900; color: #ffffff22; }
+  #kb { position: absolute; left: 4px; right: 4px; bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; gap: 5px; justify-content: center; }
+  .key { flex: 0 0 34px; height: 54px; border-radius: 8px; background: #2d2a3e; color: #fff; font-size: 22px; font-weight: 600;
+         display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 #1a1826; }
+  .key.wide { flex: 0 0 170px; font-size: 15px; } .key.mid { flex: 0 0 70px; font-size: 15px; }
+  .key.hit { background: #ff4f8b; transform: translateY(2px); box-shadow: none; }
+</style>
+</head><body>
+<div id="game">
+  <div class="hud"><span id="wpm">0 wpm</span><span id="lvl">Layout 1</span></div>
+  <div id="layout"></div>
+  <div id="target"></div>
+  <div id="timer">60</div>
+  <div id="kb"></div>
+  <div id="over" class="panel hidden">
+    <h2 id="otitle">Time.</h2>
+    <p id="final"></p>
+    <button class="btn" id="again">Again</button>
+    <a class="inv-back" href="index.html">all prototypes</a>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const root = $('game');
+const inv = Inverted.create({
+  root, width: 400, height: 700,
+  title: 'Upside Type',
+  subtitle: 'A typing test you will fail.',
+  howTo: [
+    'Type the phrase on the keyboard as fast as you can. 60 seconds.',
+    'The whole thing is upside down, keyboard included. Flip the phone and it flips back.',
+    'Every phrase you finish, the keyboard gets worse: mirrored, then ABC order, then scrambled.',
+    'Sideways = mirror writing.',
+  ],
+});
+
+const PHRASES = [
+  'turn it the other way', 'up is just a rumour', 'the floor is on the ceiling',
+  'my phone hates me', 'left is the new right', 'nothing is where it was',
+  'gravity is optional', 'read this upside down', 'flip it and reverse it', 'which way is home',
+];
+const QWERTY = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+const LAYOUTS = [
+  { name: 'Layout 1: normal (ish)', rows: () => QWERTY },
+  { name: 'Layout 2: mirrored', rows: () => QWERTY.map(r => [...r].reverse().join('')) },
+  { name: 'Layout 3: alphabetical', rows: () => ['abcdefghij', 'klmnopqrs', 'tuvwxyz'] },
+  { name: 'Layout 4: scrambled', rows: () => {
+      const a = [...'abcdefghijklmnopqrstuvwxyz'].sort(() => Math.random() - 0.5).join('');
+      return [a.slice(0, 10), a.slice(10, 19), a.slice(19)];
+  } },
+];
+let phrase = '', typed = '', layoutIx = 0, correct = 0, errors = 0, t0 = 0, playing = false, done = 0, order = [];
+
+function buildKb() {
+  const L = LAYOUTS[Math.min(layoutIx, LAYOUTS.length - 1)];
+  $('lvl').textContent = 'Layout ' + (Math.min(layoutIx, 3) + 1);
+  $('layout').textContent = L.name;
+  const kb = $('kb'); kb.innerHTML = '';
+  L.rows().forEach(r => {
+    const row = document.createElement('div'); row.className = 'row';
+    [...r].forEach(ch => row.appendChild(key(ch, ch)));
+    kb.appendChild(row);
+  });
+  const row = document.createElement('div'); row.className = 'row';
+  row.appendChild(key('⌫', 'back', 'mid')); row.appendChild(key('space', ' ', 'wide'));
+  kb.appendChild(row);
+}
+function key(label, val, cls) {
+  const k = document.createElement('div'); k.className = 'key ' + (cls || ''); k.textContent = label;
+  k.addEventListener('pointerdown', e => { e.preventDefault(); press(val); k.classList.add('hit'); setTimeout(() => k.classList.remove('hit'), 90); });
+  return k;
+}
+function render() {
+  let h = '';
+  for (let i = 0; i < phrase.length; i++) {
+    const ch = phrase[i] === ' ' ? '&nbsp;' : phrase[i];
+    if (i < typed.length) h += `<span class="${typed[i] === phrase[i] ? 'ok' : 'bad'}">${typed[i] === ' ' ? '&nbsp;' : ch}</span>`;
+    else h += `<span class="${i === typed.length ? 'cur' : 'todo'}">${ch}</span>`;
+  }
+  $('target').innerHTML = h;
+}
+function newPhrase() {
+  if (!order.length) order = PHRASES.slice().sort(() => Math.random() - 0.5);
+  phrase = order.pop(); typed = ''; render();
+}
+function press(v) {
+  if (!playing) return;
+  if (v === 'back') { typed = typed.slice(0, -1); render(); Inverted.beep(220, 30); return; }
+  if (typed.length >= phrase.length) return;
+  const ok = v === phrase[typed.length];
+  typed += v;
+  if (ok) { correct++; Inverted.beep(700, 25, 'triangle', 0.05); } else { errors++; Inverted.buzz(30); Inverted.beep(150, 60, 'sawtooth', 0.05); }
+  render();
+  if (typed === phrase) { done++; layoutIx++; Inverted.beep(990, 120); buildKb(); newPhrase(); }
+}
+function tick() {
+  if (playing) {
+    const el = (performance.now() - t0) / 1000;
+    const left = Math.max(0, 60 - el);
+    $('timer').textContent = Math.ceil(left);
+    $('wpm').textContent = Math.round((correct / 5) / Math.max(el / 60, 1 / 60)) + ' wpm';
+    if (left <= 0) end();
+  }
+  requestAnimationFrame(tick);
+}
+function end() {
+  playing = false;
+  const wpm = Math.round(correct / 5);
+  const acc = correct + errors ? Math.round(100 * correct / (correct + errors)) : 0;
+  const b = Inverted.best('ut', wpm);
+  $('final').innerHTML = `<b>${wpm} wpm</b> upside down, ${acc}% accuracy<br>${done} phrases, reached layout ${Math.min(layoutIx, 3) + 1}<br>${b.isNew ? 'New best!' : 'Best ' + b.best + ' wpm'}`;
+  $('over').classList.remove('hidden');
+}
+function start() {
+  layoutIx = 0; correct = 0; errors = 0; done = 0; playing = true; t0 = performance.now();
+  $('over').classList.add('hidden'); buildKb(); newPhrase();
+}
+window.addEventListener('keydown', e => {           // desktop: physical keyboard works too
+  if (/^[a-z ]$/.test(e.key)) press(e.key); else if (e.key === 'Backspace') press('back');
+});
+$('again').addEventListener('click', start);
+inv.onStart(start);
+buildKb(); requestAnimationFrame(tick);
+</script>
+</body></html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Inverted: 5 prototypes</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(circle at 50% 0, #2a1f45, #0d0d12 60%) fixed; color: #f3f3f3;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 28px 18px 60px; }
+  h1 { font-size: 44px; margin: 0; text-align: center; transform: rotate(180deg);
+       background: linear-gradient(90deg, #ff4f8b, #ffc23d); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { text-align: center; color: #bdb6d6; max-width: 460px; margin: 8px auto 26px; line-height: 1.4; }
+  .grid { display: grid; gap: 14px; max-width: 520px; margin: 0 auto; }
+  a.card { display: block; text-decoration: none; color: inherit; background: #1b1a26; border: 1px solid #2f2c42;
+           border-radius: 18px; padding: 16px 18px; transition: transform .15s; }
+  a.card:active { transform: scale(.98); }
+  .t { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+  .e { font-size: 28px; display: inline-block; transform: rotate(180deg); }
+  .k { font-size: 12px; font-weight: 700; color: #ffc23d; text-transform: uppercase; letter-spacing: 1px; }
+  .d { color: #cfc8e6; margin: 6px 0 0; line-height: 1.4; font-size: 15px; }
+  .foot { text-align: center; color: #8f89a6; font-size: 13px; margin-top: 26px; line-height: 1.5; }
+</style>
+</head><body>
+<h1>INVERTED</h1>
+<p class="lead">Five tiny games that fight back. Hold the phone any way you like: it stays upside down. Turn it sideways and it mirrors.</p>
+<div class="grid">
+  <a class="card" href="negative-space.html"><div class="k">Tilt puzzle</div><div class="t"><span class="e">◐</span>Negative Space</div>
+    <p class="d">Roll a ball by tilting. Flip the phone over and black and white swap, so walls become floor. Flip in the wrong place and you get crushed.</p></a>
+  <a class="card" href="wrong-way-up.html"><div class="k">Reflex</div><div class="t"><span class="e">↯</span>Wrong Way Up</div>
+    <p class="d">Swipe the way the word says. Red words mean the opposite, the arrow lies, and "up" is the game's up, not yours.</p></a>
+  <a class="card" href="ceiling-stack.html"><div class="k">Arcade</div><div class="t"><span class="e">▤</span>Ceiling Stack</div>
+    <p class="d">Tap to drop sliding blocks and build a tower that hangs from the sky. Tilting blows the block like wind.</p></a>
+  <a class="card" href="upside-type.html"><div class="k">Typing test</div><div class="t"><span class="e">⌨</span>Upside Type</div>
+    <p class="d">A 60 second typing test on an upside down keyboard that gets mirrored, then alphabetical, then scrambled.</p></a>
+  <a class="card" href="mirror-trace.html"><div class="k">Brain trainer</div><div class="t"><span class="e">✎</span>Mirror Trace</div>
+    <p class="d">Trace a shape in one stroke, but your line is reflected away from your finger. Six shapes, six ways to be wrong.</p></a>
+</div>
+<p class="foot">Best on a phone. On iPhone, tap Allow when asked for motion access.<br>
+On a laptop: keys 1 to 6 fake the phone's pose, arrows fake tilt.</p>
+</body></html>

@@ -1,0 +1,43 @@
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: #0d0d12; color: #f3f3f3;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none;
+}
+.inv-root {
+  position: fixed; left: 50%; top: 50%; overflow: hidden;
+  transition: transform .45s cubic-bezier(.5, -0.3, .3, 1.4);
+  background: #15151d;
+}
+.inv-start {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #2a1f45, #0d0d12 70%); padding: 20px;
+}
+.inv-card { max-width: 380px; text-align: center; }
+.inv-card h1 {
+  font-size: 40px; margin: 0 0 6px; letter-spacing: 1px; display: inline-block;
+  transform: rotate(180deg); background: linear-gradient(90deg, #ff4f8b, #ffc23d);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.inv-sub { color: #bdb6d6; margin: 0 0 12px; }
+.inv-card ul { text-align: left; padding-left: 20px; line-height: 1.45; color: #ddd; font-size: 15px; }
+.inv-go {
+  margin-top: 10px; font-size: 20px; padding: 14px 34px; border: 0; border-radius: 999px;
+  background: #ff4f8b; color: #fff; font-weight: 700; box-shadow: 0 6px 24px #ff4f8b66;
+}
+.inv-note { font-size: 12px; color: #8f89a6; }
+.inv-back { color: #bdb6d6; font-size: 14px; }
+.inv-hint {
+  position: fixed; bottom: 10px; left: 10px; right: 10px; z-index: 60; background: #000c; color: #fff;
+  padding: 10px; border-radius: 10px; font-size: 13px; text-align: center;
+}
+.hud { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between;
+  padding: 10px 14px; font-weight: 700; font-size: 18px; z-index: 5; pointer-events: none; }
+.btn { border: 0; border-radius: 12px; padding: 12px 22px; font-size: 18px; font-weight: 700;
+  background: #ff4f8b; color: #fff; }
+.btn.alt { background: #3a3550; }
+.panel { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px; background: #0d0d12ee; z-index: 20; text-align: center; padding: 30px; }
+.panel h2 { margin: 0; font-size: 34px; }
+.panel p { margin: 0; color: #cfc8e6; font-size: 17px; }
+.hidden { display: none !important; }

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Ceiling Stack</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div id="game"><canvas id="c" width="400" height="700"></canvas></div>
+<script src="engine.js"></script>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const inv = Inverted.create({
+  root: document.getElementById('game'), width: 400, height: 700,
+  title: 'Ceiling Stack',
+  subtitle: 'Build a tower that hangs from the sky.',
+  howTo: [
+    'A block slides back and forth. Tap to drop it onto the tower.',
+    'Whatever hangs over the edge gets sliced off. Perfect drops grow the block back.',
+    'The tower hangs from the ceiling, because everything here is upside down.',
+    'Tilting the phone pushes the sliding block like wind. Sideways mirrors it.',
+  ],
+});
+
+const BH = 26, BASE_Y = 660;
+let tower, mover, dir, speed, score, over, debris, cam, best = null, perfectStreak;
+function reset() {
+  tower = [{ x: 90, w: 220 }]; score = 0; over = false; debris = []; cam = 0; perfectStreak = 0;
+  spawn();
+}
+function spawn() {
+  const top = tower[tower.length - 1];
+  dir = Math.random() < 0.5 ? 1 : -1;
+  speed = 150 + Math.min(260, tower.length * 9);
+  mover = { x: dir > 0 ? -top.w : 400, w: top.w };
+}
+function drop() {
+  if (over) { reset(); return; }
+  const top = tower[tower.length - 1];
+  const l = Math.max(top.x, mover.x), r = Math.min(top.x + top.w, mover.x + mover.w);
+  if (r - l <= 0) {
+    debris.push({ x: mover.x, w: mover.w, y: tower.length, vy: 0, a: 1 });
+    over = true; Inverted.buzz(250); Inverted.beep(90, 400, 'sawtooth');
+    best = Inverted.best('cs', score);
+    return;
+  }
+  if (Math.abs(mover.x - top.x) < 5) {
+    perfectStreak++;
+    const w = Math.min(260, top.w + (perfectStreak >= 3 ? 10 : 0));
+    tower.push({ x: top.x - (w - top.w) / 2, w, perfect: true });
+    Inverted.beep(600 + perfectStreak * 80, 90, 'triangle');
+  } else {
+    perfectStreak = 0;
+    if (mover.x < l) debris.push({ x: mover.x, w: l - mover.x, y: tower.length, vy: 0, a: 1 });
+    if (mover.x + mover.w > r) debris.push({ x: r, w: mover.x + mover.w - r, y: tower.length, vy: 0, a: 1 });
+    tower.push({ x: l, w: r - l });
+    Inverted.beep(330, 60);
+  }
+  score = tower.length - 1;
+  spawn();
+}
+const yOf = i => BASE_Y - i * BH;
+const hue = i => `hsl(${(i * 11 + 300) % 360} 80% 60%)`;
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.033, (now - last) / 1000); last = now;
+  if (inv.started && !over) {
+    const g = inv.gravity();
+    // wind: tilt pushes the block (in the game's own left/right)
+    mover.x += (dir * speed + g.x * 380) * dt;
+    if (mover.x > 400) dir = -1; if (mover.x + mover.w < 0) dir = 1;
+  }
+  for (const d of debris) { d.vy += 900 * dt; d.off = (d.off || 0) + d.vy * dt; d.a = Math.max(0, d.a - dt * 0.8); }
+  debris = debris.filter(d => d.a > 0);
+  const want = Math.max(0, (tower.length - 12) * BH);
+  cam += (want - cam) * Math.min(1, dt * 5);
+  draw();
+  requestAnimationFrame(frame);
+}
+function draw() {
+  const sky = ctx.createLinearGradient(0, 0, 0, 700);
+  sky.addColorStop(0, `hsl(${230 + score * 2} 45% 12%)`); sky.addColorStop(1, '#2a1238');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, 400, 700);
+  ctx.save(); ctx.translate(0, cam);
+  // the "ceiling" anchor
+  ctx.fillStyle = '#4a4660'; ctx.fillRect(0, BASE_Y + BH, 400, 200);
+  tower.forEach((b, i) => {
+    ctx.fillStyle = hue(i); ctx.fillRect(b.x, yOf(i), b.w, BH - 2);
+    if (b.perfect) { ctx.fillStyle = '#ffffff66'; ctx.fillRect(b.x, yOf(i), b.w, 4); }
+  });
+  for (const d of debris) { ctx.globalAlpha = d.a; ctx.fillStyle = hue(d.y); ctx.fillRect(d.x, yOf(d.y) + d.off, d.w, BH - 2); }
+  ctx.globalAlpha = 1;
+  if (!over) { ctx.fillStyle = hue(tower.length); ctx.fillRect(mover.x, yOf(tower.length), mover.w, BH - 2); }
+  ctx.restore();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 64px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText(score, 200, 90);
+  if (perfectStreak >= 2) { ctx.font = 'bold 18px system-ui'; ctx.fillStyle = '#ffc23d'; ctx.fillText('PERFECT x' + perfectStreak, 200, 120); }
+  if (over) {
+    ctx.fillStyle = '#000c'; ctx.fillRect(0, 230, 400, 200);
+    ctx.fillStyle = '#ff4f8b'; ctx.font = 'bold 40px system-ui'; ctx.fillText('IT FELL UP', 200, 300);
+    ctx.fillStyle = '#fff'; ctx.font = '20px system-ui';
+    ctx.fillText(best.isNew ? 'New best: ' + score : 'Best ' + best.best, 200, 345);
+    ctx.fillStyle = '#bbb'; ctx.fillText('Tap to try again', 200, 390);
+  }
+}
+cv.addEventListener('pointerdown', () => { if (inv.started) drop(); });
+inv.onStart(reset);
+reset(); requestAnimationFrame(frame);
+</script>
+</body></html>

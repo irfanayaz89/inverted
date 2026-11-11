@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Negative Space</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div id="game"><canvas id="c" width="400" height="700"></canvas></div>
+<script src="engine.js"></script>
+<script>
+const LEVELS = [["WWWWWWWWWW", "WS.......W", "W#######.W", "W#######.W", "W........W", "W.#######W", "W.#######W", "W........W", "W#######.W", "W#######.W", "W.......GW", "WWWWWWWWWW"], ["WWWWWWWWWW", "W#.##...#W", "W####....W", "W####....W", "W#####...W", "W######..W", "W######..W", "W#####S..W", "W####...#W", "W#####.##W", "W##o#####W", "W##o#####W", "WG##o####W", "WWWWWWWWWW"], ["WWWWWWWWWW", "W..######W", "WG.....##W", "W#.....^#W", "W......##W", "W.^..####W", "W...o####W", "W..##o###W", "W..####o#W", "W########W", "W########W", "Wo..S####W", "W.....###W", "WWWWWWWWWW"], ["WWWWWWWWWW", "W.###....W", "W..##....W", "W.S###...W", "W..#^##..W", "W##.#^o.oW", "W##......W", "W##.o.###W", "W####o###W", "W^#######W", "W########W", "W####G^#.W", "W#####..#W", "WWWWWWWWWW"], ["WWWWWWWWWW", "W^.#####.W", "W..#S##o.W", "W.#####..W", "W#####^#oW", "W#o#..###W", "W##..^.#oW", "W.....o##W", "W.......^W", "W.^......W", "W........W", "W........W", "W....##.GW", "WWWWWWWWWW"]];
+const NAMES = ['Roll', 'First Flip', 'Double Back', 'Safe Spaces', 'Four Flips'];
+const T = 40, R = 11;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const inv = Inverted.create({
+  root: document.getElementById('game'), width: 400, height: 700,
+  tiltThreshold: 0.6, settleMs: 300,
+  title: 'Negative Space',
+  subtitle: 'Tilt to roll. Flip to invert the world.',
+  howTo: [
+    'Tilt the phone to roll the ball to the green goal.',
+    'Black is wall, white is floor. Flip the phone over and they swap.',
+    'The screen flips back so it is always upside down. Sorry.',
+    'Only flip while the ball sits on a grey safe tile, or it gets crushed.',
+    'Red spikes are always deadly. Sideways = mirror world.',
+  ],
+});
+
+let lvl = 0, grid, ox, oy, ball, inverted, frozenUntil = 0, deaths = 0, t0 = 0, msg = null, done = false;
+
+function load(i) {
+  lvl = i; grid = LEVELS[i]; inverted = false;
+  ox = (400 - grid[0].length * T) / 2; oy = 90 + (600 - grid.length * T) / 2;
+  for (let r = 0; r < grid.length; r++) for (let c = 0; c < grid[r].length; c++)
+    if (grid[r][c] === 'S') ball = { x: ox + c * T + T / 2, y: oy + r * T + T / 2, vx: 0, vy: 0 };
+  t0 = performance.now(); msg = null;
+}
+function cell(x, y) {
+  const c = Math.floor((x - ox) / T), r = Math.floor((y - oy) / T);
+  if (r < 0 || r >= grid.length || c < 0 || c >= grid[0].length) return 'W';
+  return grid[r][c];
+}
+function solid(ch) { return ch === 'W' || (ch === '#' && !inverted) || (ch === '.' && inverted); }
+function hits(x, y, rad, test) {
+  const c0 = Math.floor((x - rad - ox) / T), c1 = Math.floor((x + rad - ox) / T);
+  const r0 = Math.floor((y - rad - oy) / T), r1 = Math.floor((y + rad - oy) / T);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    const ch = (r < 0 || r >= grid.length || c < 0 || c >= grid[0].length) ? 'W' : grid[r][c];
+    if (!test(ch)) continue;
+    const nx = Math.max(ox + c * T, Math.min(x, ox + c * T + T)), ny = Math.max(oy + r * T, Math.min(y, oy + r * T + T));
+    if ((nx - x) ** 2 + (ny - y) ** 2 < rad * rad) return true;
+  }
+  return false;
+}
+function die(why) {
+  deaths++; msg = { text: why, until: performance.now() + 1100 };
+  Inverted.buzz(200); Inverted.beep(110, 300, 'sawtooth');
+  const keep = deaths; const i = lvl; setTimeout(() => { load(i); }, 900);
+  ball.dead = true;
+}
+
+inv.onPose((p, prev) => {
+  if (done) return;
+  const portrait = x => x === 'up' || x === 'down';
+  frozenUntil = performance.now() + 450;
+  if (portrait(p) && portrait(prev) && !ball.dead) {
+    inverted = !inverted;
+    Inverted.beep(inverted ? 660 : 330, 120, 'triangle');
+    const here = cell(ball.x, ball.y);
+    if (solid(here)) return die('CRUSHED');
+    // nudge to the tile centre if we were brushing an edge
+    if (hits(ball.x, ball.y, R, solid)) {
+      ball.x = ox + Math.floor((ball.x - ox) / T) * T + T / 2;
+      ball.y = oy + Math.floor((ball.y - oy) / T) * T + T / 2;
+    }
+  }
+});
+
+let last = performance.now();
+function step(now) {
+  const dt = Math.min(0.033, (now - last) / 1000); last = now;
+  if (inv.started && !done && ball && !ball.dead && now > frozenUntil) {
+    const g = inv.gravity();
+    const A = 1100;
+    ball.vx += g.x * A * dt; ball.vy += g.y * A * dt;
+    const damp = Math.pow(0.35, dt); ball.vx *= damp; ball.vy *= damp;
+    const sp = Math.hypot(ball.vx, ball.vy), MAX = 420;
+    if (sp > MAX) { ball.vx *= MAX / sp; ball.vy *= MAX / sp; }
+    const N = 4;
+    for (let i = 0; i < N; i++) {
+      const nx = ball.x + ball.vx * dt / N;
+      if (hits(nx, ball.y, R, solid)) ball.vx *= -0.25; else ball.x = nx;
+      const ny = ball.y + ball.vy * dt / N;
+      if (hits(ball.x, ny, R, solid)) ball.vy *= -0.25; else ball.y = ny;
+    }
+    if (hits(ball.x, ball.y, R - 4, ch => ch === '^')) die('SPIKED');
+    else if (cell(ball.x, ball.y) === 'G') {
+      Inverted.beep(880, 120); setTimeout(() => Inverted.beep(1320, 200), 120);
+      if (lvl + 1 < LEVELS.length) { msg = { text: 'NICE', until: now + 800 }; const n = lvl + 1; ball.dead = true; setTimeout(() => load(n), 700); }
+      else { done = true; const secs = (now - tStart) / 1000; result = { secs, deaths, b: Inverted.best('ns-time', secs, true) }; }
+    }
+  }
+  draw(now);
+  requestAnimationFrame(step);
+}
+let tStart = performance.now(), result = null;
+inv.onStart(() => { tStart = performance.now(); load(0); });
+
+function draw(now) {
+  const FG = inverted ? '#f4f1e8' : '#111', BG = inverted ? '#111' : '#f4f1e8';
+  ctx.fillStyle = '#1b1b24'; ctx.fillRect(0, 0, 400, 700);
+  if (!grid) return;
+  for (let r = 0; r < grid.length; r++) for (let c = 0; c < grid[r].length; c++) {
+    const ch = grid[r][c], x = ox + c * T, y = oy + r * T;
+    ctx.fillStyle = ch === 'W' ? '#4a4660' : ch === '#' ? '#111' : ch === '.' ? '#f4f1e8'
+      : ch === 'o' || ch === 'S' ? '#8d8aa0' : ch === 'G' ? '#29d17d' : '#f4f1e8';
+    if (ch === '^') ctx.fillStyle = inverted ? '#f4f1e8' : '#111';
+    ctx.fillRect(x, y, T, T);
+    if (ch === '^') {
+      ctx.fillStyle = '#ff3355'; ctx.beginPath();
+      for (let k = 0; k < 3; k++) { ctx.moveTo(x + k * 13 + 1, y + T - 4); ctx.lineTo(x + k * 13 + 7.5, y + 6); ctx.lineTo(x + k * 13 + 14, y + T - 4); }
+      ctx.fill();
+    }
+    if (ch === 'o' || ch === 'S') { ctx.strokeStyle = '#ffffff55'; ctx.lineWidth = 2; ctx.strokeRect(x + 5, y + 5, T - 10, T - 10); }
+  }
+  // the solid colour gets a hatch so you can read which one blocks you
+  ctx.save(); ctx.globalAlpha = 0.18; ctx.strokeStyle = inverted ? '#000' : '#fff'; ctx.lineWidth = 1;
+  for (let r = 0; r < grid.length; r++) for (let c = 0; c < grid[r].length; c++) {
+    const ch = grid[r][c]; if (!(ch === '#' && !inverted) && !(ch === '.' && inverted)) continue;
+    const x = ox + c * T, y = oy + r * T; ctx.beginPath();
+    for (let k = -T; k < T; k += 10) { ctx.moveTo(x + Math.max(0, k), y + Math.max(0, -k)); ctx.lineTo(x + Math.min(T, k + T), y + Math.min(T, T - k)); }
+    ctx.stroke();
+  }
+  ctx.restore();
+  if (ball && !ball.dead) {
+    ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(ball.x, ball.y, R, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffffffaa'; ctx.beginPath(); ctx.arc(ball.x - 4, ball.y - 4, 3.5, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText('Level ' + (lvl + 1) + '/' + LEVELS.length + ': ' + NAMES[lvl], 16, 34);
+  ctx.textAlign = 'right'; ctx.fillText('Deaths ' + deaths, 384, 34);
+  ctx.textAlign = 'left'; ctx.font = '14px system-ui'; ctx.fillStyle = '#bbb';
+  ctx.fillText('Solid now: ' + (inverted ? 'WHITE' : 'BLACK') + '   ' + ((now - tStart) / 1000).toFixed(1) + 's', 16, 58);
+  if (msg && now < msg.until) {
+    ctx.fillStyle = '#000a'; ctx.fillRect(0, 300, 400, 100);
+    ctx.fillStyle = '#ffc23d'; ctx.font = 'bold 54px system-ui'; ctx.textAlign = 'center'; ctx.fillText(msg.text, 200, 370);
+  }
+  if (result) {
+    ctx.fillStyle = '#000d'; ctx.fillRect(0, 0, 400, 700); ctx.textAlign = 'center';
+    ctx.fillStyle = '#29d17d'; ctx.font = 'bold 40px system-ui'; ctx.fillText('ESCAPED', 200, 280);
+    ctx.fillStyle = '#fff'; ctx.font = '22px system-ui';
+    ctx.fillText(result.secs.toFixed(1) + 's with ' + result.deaths + ' deaths', 200, 330);
+    ctx.fillText((result.b.isNew ? 'New best!' : 'Best: ' + (+result.b.best).toFixed(1) + 's'), 200, 365);
+    ctx.fillStyle = '#bbb'; ctx.font = '18px system-ui'; ctx.fillText('Tap to play again', 200, 420);
+  }
+}
+cv.addEventListener('pointerdown', () => { if (result) { result = null; done = false; deaths = 0; tStart = performance.now(); load(0); } });
+window.addEventListener('keydown', e => { if (e.key === 'f' || e.key === 'F') { /* desktop: simulate a flip */ const p = inv.pose === 'down' ? '1' : '2'; window.dispatchEvent(new KeyboardEvent('keydown', { key: p })); } });
+requestAnimationFrame(step);
+</script>
+</body></html>
