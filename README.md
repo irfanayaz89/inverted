@@ -1,6 +1,6 @@
 # Inverted
 
-Phone games that fight back. However you hold the phone, the game stays **upside down**. Turn it sideways and it **mirrors**. Tilt controls are inverted too.
+Phone games and apps that fight back. However you hold the phone, the game stays **upside down**. Turn it sideways and it **mirrors**. Tilt controls are inverted too.
 
 ## Layout
 
@@ -39,5 +39,15 @@ On a laptop, keys 1-6 fake the phone's pose (1 upright, 2 upside down, 3/4 sidew
 | Ceiling Stack (stacker hanging from the ceiling, tilt = wind) | Ported |
 | Upside Type (60s typing test, keyboard gets worse each phrase) | Ported |
 | Mirror Trace (trace shapes while your line is reflected) | Ported |
+| Upfall (stars and bombs fall up; inverted-tilt paddle) | New |
+| Flip Off (party game: get the phone into the pose it shouts, unless it's a trap) | New |
+| Echo Back (memory: replay the pad pattern in reverse; the board sometimes spins) | New |
+
+### Apps
+
+| App | What it does |
+|---|---|
+| Flip Focus | Focus timer that only counts while the phone is face down. 3 second grace if you pick it up, then the streak breaks. Stats kept in AsyncStorage. Uses expo-keep-awake so the screen doesn't lock mid-session. |
+| Flip Text | Turns typed text upside down or backwards, with Copy and Share. The one screen that is not inverted, so you can type. |
 
 Taps use the responder system (`onStartShouldSetResponder` / `onResponderGrant`) rather than `Pressable.onPressIn`, which didn't fire inside the transformed board on react-native-web.
